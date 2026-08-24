@@ -1,0 +1,46 @@
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Sid": "DenyAllActionsOutsideApprovedRegions",
+      "Effect": "Deny",
+      "Action": "*",
+      "Resource": "*",
+      "Condition": {
+        "StringNotEquals": {
+          "aws:RequestedRegion": [
+            "us-east-1",
+            "us-west-2"
+          ]
+        },
+        "StringNotLike": {
+          "aws:PrincipalARN": [
+            "arn:aws:iam::*:role/AWSServiceRoleFor*"
+          ]
+        }
+      }
+    },
+    {
+      "Sid": "AllowGlobalServices",
+      "Effect": "Allow",
+      "Action": [
+        "iam:*",
+        "route53:*",
+        "cloudfront:*",
+        "waf:*",
+        "wafv2:*",
+        "shield:*",
+        "organizations:*",
+        "account:*",
+        "support:*",
+        "billing:*",
+        "cur:*",
+        "aws-portal:*",
+        "trustedadvisor:*",
+        "health:*",
+        "importexport:*"
+      ],
+      "Resource": "*"
+    }
+  ]
+}

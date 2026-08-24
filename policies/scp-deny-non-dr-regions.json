@@ -1,0 +1,87 @@
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Sid": "DenyS3BucketDeletionWithVersioning",
+      "Effect": "Deny",
+      "Action": [
+        "s3:DeleteBucket",
+        "s3:PutBucketVersioning",
+        "s3:DeleteBucketPolicy"
+      ],
+      "Resource": "*",
+      "Condition": {
+        "StringEquals": {
+          "s3:ExistingObjectBucketVersioning": "Enabled"
+        }
+      }
+    },
+    {
+      "Sid": "DenyS3ReplicationDisabling",
+      "Effect": "Deny",
+      "Action": [
+        "s3:PutReplicationConfiguration",
+        "s3:DeleteReplicationConfiguration"
+      ],
+      "Resource": "*",
+      "Condition": {
+        "Null": {
+          "s3:ExistingObjectReplication": "false"
+        }
+      }
+    },
+    {
+      "Sid": "DenyRDSSnapshotDeletion",
+      "Effect": "Deny",
+      "Action": [
+        "rds:DeleteDBSnapshot",
+        "rds:DeleteDBClusterSnapshot"
+      ],
+      "Resource": "*",
+      "Condition": {
+        "StringLike": {
+          "rds:db-snapshot-resource-id": [
+            "arn:aws:rds:*:*:snapshot:*-automated-*",
+            "arn:aws:rds:*:*:cluster-snapshot:*-automated-*"
+          ]
+        }
+      }
+    },
+    {
+      "Sid": "DenyDRSReplicationStopping",
+      "Effect": "Deny",
+      "Action": [
+        "drs:StopReplication",
+        "drs:DeleteSourceServer",
+        "drs:DeleteRecoveryInstance"
+      ],
+      "Resource": "*"
+    },
+    {
+      "Sid": "DenyBackupRetentionReduction",
+      "Effect": "Deny",
+      "Action": [
+        "rds:ModifyDBSnapshot",
+        "rds:ModifyDBClusterSnapshot",
+        "backup:UpdateBackupVault",
+        "backup:UpdateRecoveryPointLifecycle"
+      ],
+      "Resource": "*",
+      "Condition": {
+        "NumericLessThan": {
+          "rds:current-snapshot-retention-period": 7
+        }
+      }
+    },
+    {
+      "Sid": "DenyBackupPlanDeletion",
+      "Effect": "Deny",
+      "Action": [
+        "backup:DeleteBackupPlan",
+        "backup:DeleteBackupSelection",
+        "backup:DeleteBackupVault"
+      ],
+      "Resource": "*"
+    }
+  ]
+}

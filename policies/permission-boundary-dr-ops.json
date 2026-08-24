@@ -1,0 +1,174 @@
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Sid": "AllowDRSReadOnly",
+      "Effect": "Allow",
+      "Action": [
+        "drs:Describe*",
+        "drs:List*",
+        "drs:Get*"
+      ],
+      "Resource": "*"
+    },
+    {
+      "Sid": "AllowDRSFailover",
+      "Effect": "Allow",
+      "Action": [
+        "drs:StartRecovery",
+        "drs:TerminateRecoveryInstances",
+        "drs:InitiateFailback"
+      ],
+      "Resource": "*",
+      "Condition": {
+        "StringEquals": {
+          "aws:RequestTag/Purpose": "DR-Drill"
+        }
+      }
+    },
+    {
+      "Sid": "AllowEC2DrillOperations",
+      "Effect": "Allow",
+      "Action": [
+        "ec2:RunInstances",
+        "ec2:TerminateInstances",
+        "ec2:StartInstances",
+        "ec2:StopInstances"
+      ],
+      "Resource": [
+        "arn:aws:ec2:*:*:instance/*",
+        "arn:aws:ec2:*:*:volume/*",
+        "arn:aws:ec2:*:*:key-pair/*",
+        "arn:aws:ec2:*:*:security-group/*",
+        "arn:aws:ec2:*:*:network-interface/*",
+        "arn:aws:ec2:*:*:subnet/*",
+        "arn:aws:ec2:*:*:snapshot/*"
+      ],
+      "Condition": {
+        "StringEquals": {
+          "aws:RequestTag/Purpose": "DR-Drill"
+        }
+      }
+    },
+    {
+      "Sid": "AllowASGDrillScaling",
+      "Effect": "Allow",
+      "Action": [
+        "autoscaling:SetDesiredCapacity",
+        "autoscaling:UpdateAutoScalingGroup"
+      ],
+      "Resource": "*",
+      "Condition": {
+        "StringEquals": {
+          "autoscaling:ResourceTag/Purpose": "DR-WarmStandby"
+        }
+      }
+    },
+    {
+      "Sid": "AllowCloudWatchAlarms",
+      "Effect": "Allow",
+      "Action": [
+        "cloudwatch:PutMetricAlarm",
+        "cloudwatch:DeleteAlarms",
+        "cloudwatch:DescribeAlarms",
+        "cloudwatch:GetMetricStatistics",
+        "cloudwatch:ListMetrics"
+      ],
+      "Resource": "*"
+    },
+    {
+      "Sid": "AllowSNSNotifications",
+      "Effect": "Allow",
+      "Action": [
+        "sns:Publish",
+        "sns:CreateTopic",
+        "sns:Subscribe",
+        "sns:ListTopics"
+      ],
+      "Resource": "arn:aws:sns:*:*:DR-*"
+    },
+    {
+      "Sid": "AllowResourceGroupTagging",
+      "Effect": "Allow",
+      "Action": [
+        "resource-groups:ListGroups",
+        "resource-groups:GetGroup",
+        "resource-groups:SearchResources",
+        "tag:GetResources",
+        "tag:GetTagKeys",
+        "tag:GetTagValues"
+      ],
+      "Resource": "*"
+    },
+    {
+      "Sid": "DenyOrganizationsModification",
+      "Effect": "Deny",
+      "Action": [
+        "organizations:*"
+      ],
+      "Resource": "*"
+    },
+    {
+      "Sid": "DenyIAMRoleDeletion",
+      "Effect": "Deny",
+      "Action": [
+        "iam:DeleteRole",
+        "iam:DeletePolicy",
+        "iam:DeleteRolePermissionsBoundary",
+        "iam:DetachRolePolicy"
+      ],
+      "Resource": "*"
+    },
+    {
+      "Sid": "DenyS3BackupDeletion",
+      "Effect": "Deny",
+      "Action": [
+        "s3:DeleteBucket",
+        "s3:DeleteObject",
+        "s3:DeleteObjectVersion",
+        "s3:PutBucketVersioning",
+        "s3:DeleteBucketPolicy"
+      ],
+      "Resource": "*",
+      "Condition": {
+        "StringNotEquals": {
+          "s3:ExistingResourceTag/Purpose": "DR-Drill"
+        }
+      }
+    },
+    {
+      "Sid": "DenyRDSSnapshotDeletion",
+      "Effect": "Deny",
+      "Action": [
+        "rds:DeleteDBSnapshot",
+        "rds:DeleteDBClusterSnapshot"
+      ],
+      "Resource": "*"
+    },
+    {
+      "Sid": "DenyProductionInstanceTermination",
+      "Effect": "Deny",
+      "Action": [
+        "ec2:TerminateInstances",
+        "ec2:StopInstances"
+      ],
+      "Resource": "*",
+      "Condition": {
+        "StringNotEquals": {
+          "ec2:ResourceTag/Purpose": [
+            "DR-Drill",
+            "DR-WarmStandby"
+          ]
+        }
+      }
+    },
+    {
+      "Sid": "AllowPassRoleToDRS",
+      "Effect": "Allow",
+      "Action": [
+        "iam:PassRole"
+      ],
+      "Resource": "arn:aws:iam::*:role/DRS-*"
+    }
+  ]
+}

@@ -1,0 +1,103 @@
+graph TB
+    subgraph "Governance Layer"
+        SCP[Service Control Policies]
+        PB[Permission Boundaries]
+        IAM[IAM Roles]
+    end
+    
+    subgraph "BIA & Criticality"
+        TAG[Resource Tagging API]
+        RG[Resource Groups]
+        INV[Asset Inventory]
+    end
+    
+    subgraph "Primary Region us-east-1"
+        PROD_VPC[Production VPC]
+        PROD_EC2[EC2 Instances]
+        PROD_RDS[RDS Primary]
+        PROD_S3[S3 Primary Bucket]
+        DRS_A[DRS Agent]
+        ASG_P[Auto Scaling Group]
+    end
+    
+    subgraph "DR Region us-west-2"
+        DR_VPC[DR VPC]
+        DR_SUB[DR Subnet]
+        DR_SG[DR Security Group]
+        DRS_STAGING[DRS Staging Area]
+        DRS_RECOVERY[DRS Recovery Instances]
+        ASG_DR[Warm Standby ASG]
+        S3_REPLICA[S3 Replica Bucket]
+        RDS_SNAPSHOT[RDS Cross-Region Snapshot]
+        DRILL_INST[Drill Instances]
+    end
+    
+    subgraph "Monitoring & Alerting"
+        CW[CloudWatch Metrics]
+        ALM[MTD Alarms]
+        SNS[SNS Topic]
+        EMAIL[Email/Slack]
+    end
+    
+    subgraph "Automation Scripts"
+        TAG_SCRIPT[tag_resources_by_criticality.sh]
+        SCP_SCRIPT[deploy_scp.sh]
+        DRS_SCRIPT[initiate_drs_failover.sh]
+        HOT_SCRIPT[deploy_hot_site.sh]
+        ALARM_SCRIPT[create_mtd_alarm.sh]
+        DRILL_SCRIPT[launch_drill_instance.sh]
+        VALID_SCRIPT[validate_backup_integrity.sh]
+    end
+    
+    SCP --> IAM
+    PB --> IAM
+    TAG --> RG
+    RG --> INV
+    
+    PROD_VPC --> PROD_EC2
+    PROD_VPC --> PROD_RDS
+    PROD_VPC --> PROD_S3
+    PROD_VPC --> ASG_P
+    PROD_EC2 --> DRS_A
+    
+    DRS_A -->|Continuous Replication| DRS_STAGING
+    DRS_STAGING -->|On Failover| DRS_RECOVERY
+    PROD_S3 -->|Cross-Region Replication| S3_REPLICA
+    PROD_RDS -->|Automated Snapshots| RDS_SNAPSHOT
+    ASG_P -->|Configuration Sync| ASG_DR
+    
+    DR_VPC --> DR_SUB
+    DR_SUB --> DR_SG
+    DR_SG --> DRILL_INST
+    ASG_DR --> DR_VPC
+    
+    DRS_RECOVERY --> CW
+    ASG_DR --> CW
+    S3_REPLICA --> CW
+    RDS_SNAPSHOT --> CW
+    PROD_EC2 --> CW
+    
+    CW --> ALM
+    ALM --> SNS
+    SNS --> EMAIL
+    
+    TAG_SCRIPT --> TAG
+    SCP_SCRIPT --> SCP
+    DRS_SCRIPT --> DRS_RECOVERY
+    HOT_SCRIPT --> ASG_DR
+    ALARM_SCRIPT --> ALM
+    DRILL_SCRIPT --> DRILL_INST
+    VALID_SCRIPT --> S3_REPLICA
+    VALID_SCRIPT --> RDS_SNAPSHOT
+    
+    style SCP fill:#ff6b6b
+    style PB fill:#ff6b6b
+    style DRS_A fill:#ff6b6b
+    style DRS_STAGING fill:#ffe66d
+    style DRS_RECOVERY fill:#4ecdc4
+    style ASG_DR fill:#ffe66d
+    style S3_REPLICA fill:#4ecdc4
+    style RDS_SNAPSHOT fill:#4ecdc4
+    style ALM fill:#ff6b6b
+    style SNS fill:#4ecdc4
+    style DRILL_INST fill:#95e1d3

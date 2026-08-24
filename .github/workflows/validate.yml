@@ -1,0 +1,357 @@
+name: Validate IaC and Scripts
+
+on:
+  pull_request:
+    branches:
+      - main
+      - develop
+  push:
+    branches:
+      - main
+      - develop
+
+jobs:
+  terraform-validate:
+    name: Terraform Validate
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        module:
+          - tagging-baseline
+          - s3-cross-region-replication
+          - drs-network
+          - warm-standby-asg
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: "1.5.0"
+
+      - name: Terraform Format Check
+        run: |
+          cd iac/terraform/modules/${{ matrix.module }}
+          terraform fmt -check -recursive
+
+      - name: Terraform Init
+        run: |
+          cd iac/terraform/modules/${{ matrix.module }}
+          terraform init
+
+      - name: Terraform Validate
+        run: |
+          cd iac/terraform/modules/${{ matrix.module }}
+          terraform validate
+
+  terraform-validate-sandbox:
+    name: Terraform Validate Sandbox Environment
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: "1.5.0"
+
+      - name: Terraform Format Check
+        run: |
+          cd iac/terraform/envs/sandbox
+          terraform fmt -check -recursive
+
+      - name: Terraform Init
+        run: |
+          cd iac/terraform/envs/sandbox
+          terraform init -backend=false
+
+      - name: Terraform Validate
+        run: |
+          cd iac/terraform/envs/sandbox
+          terraform validate
+
+  terraform-validate-monitoring:
+    name: Terraform Validate Monitoring
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: "1.5.0"
+
+      - name: Terraform Format Check
+        run: |
+          cd monitoring
+          terraform fmt -check -recursive
+
+      - name: Terraform Init
+        run: |
+          cd monitoring
+          terraform init -backend=false
+
+      - name: Terraform Validate
+        run: |
+          cd monitoring
+          terraform validate
+
+  shellcheck:
+    name: ShellCheck Scripts
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Run ShellCheck
+        uses: ludeeus/action-shellcheck@master
+        with:
+          scandir: ./scripts
+          severity: warning
+          check_together: 'yes'
+          additional_files: scripts/**/*.sh
+
+  json-validate:
+    name: Validate JSON Policies
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Install jq
+        run: sudo apt-get install -y jq
+
+      - name: Validate SCP Policies
+        run: |
+          for policy in policies/scp-*.json; do
+            echo "Validating $policy"
+            jq empty "$policy" || exit 1
+            echo "✓ $policy is valid JSON"
+          done
+
+      - name: Validate Permission Boundary Policy
+        run: |
+          echo "Validating policies/permission-boundary-dr-ops.json"
+          jq empty policies/permission-boundary-dr-ops.json || exit 1
+          echo "✓ permission-boundary-dr-ops.json is valid JSON"
+
+      - name: Validate Policy Structure
+        run: |
+          for policy in policies/*.json; do
+            echo "Checking structure of $policy"
+            version=$(jq -r '.Version' "$policy")
+            if [ "$version" != "2012-10-17" ]; then
+              echo "✗ $policy has invalid version: $version"
+              exit 1
+            fi
+            statement=$(jq -r '.Statement' "$policy")
+            if [ "$statement" == "null" ]; then
+              echo "✗ $policy missing Statement"
+              exit 1
+            fi
+            echo "✓ $policy has valid structure"
+          done
+
+  markdown-lint:
+    name: Lint Markdown Files
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Lint Markdown
+        uses: avto-dev/markdown-lint@v0.8.0
+        with:
+          config: '.markdownlint.json'
+          files: '**/*.md'
+
+  security-scan:
+    name: Security Scan
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Run Trivy vulnerability scanner
+        uses: aquasecurity/trivy-action@master
+        with:
+          scan-type: 'config'
+          scan-ref: '.'
+          format: 'sarif'
+          output: 'trivy-results.sarif'
+
+      - name: Upload Trivy results to GitHub Security tab
+        uses: github/codeql-action/upload-sarif@v3
+        with:
+          sarif_file: 'trivy-results.sarif'
+
+  check-secrets:
+    name: Check for Hardcoded Secrets
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Install trufflehog
+        run: |
+          wget -qO - https://github.com/trufflesecurity/trufflehog/releases/latest/download/trufflehog_0.0.0_Linux_x86_64.tar.gz | tar xz
+          sudo mv trufflehog /usr/local/bin/
+
+      - name: Run Trufflehog
+        run: |
+          trufflehog filesystem --directory . --exclude_paths .github/workflows/validate.yml || true
+
+  check-hardcoded-credentials:
+    name: Check for Hardcoded Credentials
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Check for AWS access keys
+        run: |
+          if grep -rE "(AKIA[0-9A-Z]{16}|aws_access_key_id|aws_secret_access_key)" --include="*.tf" --include="*.sh" --include="*.py" --include="*.json" .; then
+            echo "Found potential AWS access keys"
+            exit 1
+          fi
+          echo "No AWS access keys found"
+
+      - name: Check for hardcoded account IDs
+        run: |
+          if grep -rE "[0-9]{12}" --include="*.tf" --include="*.sh" --include="*.py" --include="*.json" . | grep -v "<SANDBOX_ACCOUNT_ID>" | grep -v "123456789012"; then
+            echo "Found potential hardcoded account IDs"
+            exit 1
+          fi
+          echo "No hardcoded account IDs found"
+
+  validate-scripts-executable:
+    name: Validate Script Permissions
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Check script permissions
+        run: |
+          for script in scripts/**/*.sh; do
+            if [ -f "$script" ]; then
+              if [ ! -x "$script" ]; then
+                echo "⚠️ Script $script is not executable"
+              else
+                echo "✓ $script is executable"
+              fi
+            fi
+          done
+
+  validate-documentation-links:
+    name: Validate Documentation Links
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Check documentation files exist
+        run: |
+          required_docs=(
+            "docs/01-governance.md"
+            "docs/02-bia-criticality.md"
+            "docs/03-recovery-strategy.md"
+            "docs/04-monitoring-mtd.md"
+            "docs/05-testing-drp.md"
+            "docs/architecture.mmd"
+            "README.md"
+          )
+          
+          for doc in "${required_docs[@]}"; do
+            if [ -f "$doc" ]; then
+              echo "✓ $doc exists"
+            else
+              echo "✗ $doc is missing"
+              exit 1
+            fi
+          done
+
+  validate-policy-files:
+    name: Validate Policy Files Exist
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Check policy files exist
+        run: |
+          required_policies=(
+            "policies/scp-data-residency.json"
+            "policies/scp-deny-non-dr-regions.json"
+            "policies/permission-boundary-dr-ops.json"
+          )
+          
+          for policy in "${required_policies[@]}"; do
+            if [ -f "$policy" ]; then
+              echo "✓ $policy exists"
+            else
+              echo "✗ $policy is missing"
+              exit 1
+            fi
+          done
+
+  validate-terraform-modules:
+    name: Validate Terraform Module Structure
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Check module structure
+        run: |
+          modules=(
+            "iac/terraform/modules/tagging-baseline"
+            "iac/terraform/modules/s3-cross-region-replication"
+            "iac/terraform/modules/drs-network"
+            "iac/terraform/modules/warm-standby-asg"
+          )
+          
+          for module in "${modules[@]}"; do
+            if [ -d "$module" ]; then
+              if [ -f "$module/main.tf" ] && [ -f "$module/variables.tf" ] && [ -f "$module/outputs.tf" ]; then
+                echo "✓ $module has complete structure"
+              else
+                echo "✗ $module is missing required files"
+                exit 1
+              fi
+            else
+              echo "✗ $module directory is missing"
+              exit 1
+            fi
+          done
+
+  validate-scripts-exist:
+    name: Validate Scripts Exist
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Check scripts exist
+        run: |
+          required_scripts=(
+            "scripts/bia/tag_resources_by_criticality.sh"
+            "scripts/governance/deploy_scp.sh"
+            "scripts/recovery/initiate_drs_failover.sh"
+            "scripts/recovery/deploy_hot_site.sh"
+            "scripts/monitoring/create_mtd_alarm.sh"
+            "scripts/testing/launch_drill_instance.sh"
+            "scripts/testing/validate_backup_integrity.sh"
+          )
+          
+          for script in "${required_scripts[@]}"; do
+            if [ -f "$script" ]; then
+              echo "✓ $script exists"
+            else
+              echo "✗ $script is missing"
+              exit 1
+            fi
+          done
