@@ -6,10 +6,10 @@ A comprehensive reference implementation that transforms a standard Business Con
 
 This repository demonstrates how to operationalize disaster recovery (DR) on AWS through four canonical BCP phases:
 
-1. **Governance / Contingency Policy** — Org-level rules constraining recovery infrastructure
-2. **BIA (Business Impact Analysis) & Criticality Classification** — Tagging and inventory for disaster identification
-3. **Recovery Strategy** — Hot-site / warm-standby infrastructure with RTO/RPO enforcement
-4. **DRP Testing / Drills** — Scripted, non-destructive validation of recovery environments
+1. **Governance / Contingency Policy**: Org-level rules constraining recovery infrastructure
+2. **BIA (Business Impact Analysis) & Criticality Classification**: Tagging and inventory for disaster identification
+3. **Recovery Strategy**: Hot-site / warm-standby infrastructure with RTO/RPO enforcement
+4. **DRP Testing / Drills**: Scripted, non-destructive validation of recovery environments
 
 ## Architecture
 
@@ -118,12 +118,12 @@ aws-bcp-framework/
 
 ## Functional Requirements Mapping
 
-### 1. Policy Mapping — Contingency Policy as AWS Guardrails
+### 1. Policy Mapping: Contingency Policy as AWS Guardrails
 - **AWS Organizations SCP** enforcing data residency and blocking backup/replication service disabling
 - **IAM permission boundary** for `DR-Operator` role with scoped failover/drill permissions
 - Documentation: `docs/01-governance.md` with BCP policy clause → AWS control mapping
 
-### 2. Technical Implementation — Recovery Strategy → AWS Services
+### 2. Technical Implementation: Recovery Strategy to AWS Services
 
 | Strategy | AWS Service(s) | Terraform Module |
 |---|---|---|
@@ -133,7 +133,7 @@ aws-bcp-framework/
 | Database recovery | RDS automated cross-region snapshots | Integrated in modules |
 | RTO/RPO enforcement | DRS launch settings + replication config | `drs-network/` |
 
-### 3. Automation Scripts — AWS CLI Per Phase
+### 3. Automation Scripts: AWS CLI Per Phase
 
 All scripts include:
 - Required env var/flag validation
@@ -151,14 +151,14 @@ All scripts include:
 | Testing | `launch_drill_instance.sh` | Spin up sandboxed drill instance |
 | Testing | `validate_backup_integrity.sh` | Checksum/row-count validation |
 
-### 4. Monitoring — CloudWatch & MTD
+### 4. Monitoring: CloudWatch and MTD
 
 - Custom metrics tracking: "time since last successful replication", "primary region health check failure duration"
 - Alarm thresholds set **below** documented MTD to fire before breach
 - SNS integration for email/Slack notifications
 - Documentation: `docs/04-monitoring-mtd.md` with RTO/RPO/MTD relationships
 
-### 5. Testing Checklist — Automated Warm-Standby Validation
+### 5. Testing Checklist: Automated Warm-Standby Validation
 
 `tests/checklist.md` covers:
 - Warm-standby scale-up within target RTO (scripted timing)
