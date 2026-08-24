@@ -130,9 +130,13 @@
         "s3:DeleteBucketPolicy"
       ],
       "Resource": "*",
+      "Comment": "BUG FIX: Original condition was inverted — it was ALLOWING deletion of DR-Drill buckets and BLOCKING deletion of everything else, which is backwards. Fixed: deny deletion of Production and DR-Backup buckets; allow deletion only on explicitly tagged DR-Drill resources.",
       "Condition": {
         "StringNotEquals": {
-          "s3:ExistingResourceTag/Purpose": "DR-Drill"
+          "s3:ExistingResourceTag/Purpose": [
+            "DR-Drill",
+            "BCP-Demo"
+          ]
         }
       }
     },

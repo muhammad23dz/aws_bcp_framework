@@ -138,29 +138,28 @@ validate_s3_checksum() {
 validate_s3_object_count() {
     local source="$1"
     local dest="$2"
-    
+
     log "Performing S3 object count validation..."
     log "Source bucket: $source"
     log "Destination bucket: $dest"
-    
-    local source_count=$(aws s3api list-objects-v2 \
-        --bucket "$source" \
-        --query "KeyCount" \
-        --output text 2>/dev/null || echo "0")
-    
-    local dest_count=$(aws s3api list-objects-v2 \
-        --bucket "$dest" \
-        --query "KeyCount" \
-        --output text 2>/dev/null || echo "0")
-    
-    log "Source object count: $source_count"
-    log "Destination object count: $dest_count"
-    
-    if [[ "$source_count" == "$dest_count" ]]; then
-        log "S3 object count validation PASSED"
+
+    # FIX: list-objects-v2 only returns up to 1000 items per page. Use
+    # 'aws s3 ls --recursive' which paginates automatically, then count lines.
+    local source_count
+    source_count=$(aws s3 ls "s3://${source}" --recursive 2>/dev/null | wc -l | tr -d ' ')
+
+    local dest_count
+    dest_count=$(aws s3 ls "s3://${dest}" --recursive 2>/dev/null | wc -l | tr -d ' ')
+
+    log "Source object count : $source_count"
+    log "Destination object count : $dest_count"
+
+    if [[ "$source_count" -eq "$dest_count" ]]; then
+        log "S3 object count validation PASSED ($source_count objects match)"
         return 0
     else
-        error "S3 object count validation FAILED: source=$source_count, dest=$dest_count"
+        local diff=$(( source_count - dest_count ))
+        error "S3 object count validation FAILED: source=$source_count, dest=$dest_count (delta=$diff). Replication may still be in progress."
     fi
 }
 

@@ -141,11 +141,13 @@ resource "aws_iam_policy" "replication" {
     Version = "2012-10-17"
     Statement = [
       {
+        # The replication role only needs to READ the replication configuration
+        # and bucket versioning from the source bucket — NOT modify them.
+        # Removing s3:PutReplicationConfiguration (least-privilege fix).
         Effect = "Allow"
         Action = [
           "s3:GetReplicationConfiguration",
-          "s3:GetBucketVersioning",
-          "s3:PutReplicationConfiguration"
+          "s3:GetBucketVersioning"
         ]
         Resource = aws_s3_bucket.primary.arn
       },
@@ -154,7 +156,8 @@ resource "aws_iam_policy" "replication" {
         Action = [
           "s3:ListBucket",
           "s3:GetObjectVersion",
-          "s3:GetObjectVersionAcl"
+          "s3:GetObjectVersionAcl",
+          "s3:GetObjectVersionTagging"
         ]
         Resource = [
           aws_s3_bucket.primary.arn,
@@ -167,8 +170,9 @@ resource "aws_iam_policy" "replication" {
           "s3:ReplicateObject",
           "s3:ReplicateDelete",
           "s3:ReplicateTags",
-          "s3:GetBucketVersioning",
-          "s3:PutBucketVersioning"
+          "s3:GetBucketVersioning"
+          # Removed s3:PutBucketVersioning — versioning on replica is managed
+          # by Terraform (aws_s3_bucket_versioning.replica), not this role.
         ]
         Resource = [
           aws_s3_bucket.replica.arn,

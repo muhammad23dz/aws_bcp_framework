@@ -22,7 +22,7 @@ def lambda_handler(event, context):
         Dictionary with execution result
     """
     try:
-        print(f"Starting Security Hub report generation at {datetime.now().isoformat()}")
+        print(f"Starting Security Hub report generation at {datetime.now(timezone.utc).isoformat()}")
         
         # Get environment variables
         bucket_name = os.environ.get('S3_BUCKET_NAME')
@@ -46,8 +46,8 @@ def lambda_handler(event, context):
             
         print(f"Using bucket: {bucket_name}")
         
-        # Generate today's filename
-        today = datetime.now()
+        # Generate today's filename (always UTC in Lambda)
+        today = datetime.now(timezone.utc)
         timestamp = today.strftime("%Y%m%d_%H%M%S")
         output_filename = f"security_hub_report_{timestamp}.xlsx"
         
@@ -180,9 +180,12 @@ def get_security_hub_findings(securityhub):
     try:
         print("Starting to retrieve Security Hub findings...")
         
+        # FIX: Removed MaxItems=1000 cap. In real environments Security Hub
+        # can have tens of thousands of findings; silently truncating the report
+        # would make it incomplete with no warning to the caller.
         for page_num, page in enumerate(paginator.paginate(
             Filters=filters,
-            PaginationConfig={'MaxItems': 1000, 'PageSize': 100}
+            PaginationConfig={'PageSize': 100}
         ), 1):
             page_findings = page.get('Findings', [])
             findings.extend(page_findings)
@@ -327,7 +330,7 @@ def create_summary_sheet(wb, summary_stats, total_findings):
     
     # Add header
     ws.append(["Security Hub Compliance Report"])
-    ws.append([f"Generated: {datetime.now().isoformat()}"])
+    ws.append([f"Generated: {datetime.now(timezone.utc).isoformat()} UTC"])
     ws.append([f"Total Findings: {total_findings}"])
     ws.append([""])
     

@@ -83,17 +83,21 @@ check_drs_agent_status() {
 check_replication_status() {
     local server_id="$1"
     log "Checking replication status for server: $server_id"
-    
-    local status=$(aws drs describe-replication-instances \
+
+    # BUG FIX: aws drs describe-replication-instances does NOT exist in the DRS
+    # API — that belongs to AWS DMS. The correct call is describe-source-servers
+    # querying the dataReplicationInfo.dataReplicationState field.
+    local status
+    status=$(aws drs describe-source-servers \
         --source-server-ids "$server_id" \
         --region "$DR_REGION" \
-        --query "replicationInstances[0].replicationStatus" \
+        --query "sourceServers[0].dataReplicationInfo.dataReplicationState" \
         --output text 2>/dev/null || echo "UNKNOWN")
-    
-    if [[ "$status" != "ACTIVE" ]]; then
-        warn "Replication status: $status (expected: ACTIVE)"
+
+    if [[ "$status" != "CONTINUOUS" && "$status" != "RESCAN" ]]; then
+        warn "Replication status: $status (expected: CONTINUOUS or RESCAN)"
     else
-        log "Replication status: ACTIVE"
+        log "Replication status: $status (healthy)"
     fi
 }
 
@@ -189,6 +193,10 @@ else
     log "Recovery job ID: $RECOVERY_ID"
     
     # Monitor recovery progress
+    # BUG FIX: Initialize STATUS before the loop so that if the loop body never
+    # executes (e.g., $RECOVERY_ID is empty), referencing $STATUS with set -u
+    # won't cause an "unbound variable" error.
+    STATUS="PENDING"
     log "Monitoring recovery progress..."
     for i in {1..30}; do
         sleep 10
@@ -197,19 +205,19 @@ else
             --region "$DR_REGION" \
             --query "jobs[0].status" \
             --output text 2>/dev/null || echo "UNKNOWN")
-        
-        log "Recovery status: $STATUS"
-        
+
+        log "Recovery status ($i/30): $STATUS"
+
         if [[ "$STATUS" == "COMPLETED" ]]; then
             log "Recovery completed successfully"
             break
         elif [[ "$STATUS" == "FAILED" ]]; then
-            error "Recovery failed"
+            error "Recovery failed — check the DRS console for details"
         fi
     done
-    
+
     if [[ "$STATUS" != "COMPLETED" ]]; then
-        warn "Recovery still in progress after 5 minutes"
+        warn "Recovery still in progress after ~5 minutes"
         log "Check status with: aws drs describe-jobs --job-ids $RECOVERY_ID --region $DR_REGION"
     fi
 fi

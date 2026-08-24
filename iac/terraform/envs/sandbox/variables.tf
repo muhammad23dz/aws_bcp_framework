@@ -52,10 +52,10 @@ variable "warm_standby_vpc_cidr" {
   default     = "10.2.0.0/16"
 }
 
-variable "warm_standby_subnet_cidr" {
-  description = "CIDR block for warm standby subnet"
-  type        = string
-  default     = "10.2.1.0/24"
+variable "warm_standby_subnet_cidrs" {
+  description = "List of CIDR blocks for warm standby subnets (one per AZ). Two or more recommended for multi-AZ DR resiliency."
+  type        = list(string)
+  default     = ["10.2.1.0/24", "10.2.2.0/24"]
 }
 
 variable "source_server_id" {

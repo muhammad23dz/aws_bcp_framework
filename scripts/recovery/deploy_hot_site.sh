@@ -68,10 +68,17 @@ error() {
 check_asg_exists() {
     local asg_name="$1"
     local region="$2"
-    
-    if ! aws autoscaling describe-auto-scaling-groups \
+
+    # NOTE: describe-auto-scaling-groups returns exit 0 even when the ASG does
+    # not exist (it just returns an empty list). We must check the output.
+    local result
+    result=$(aws autoscaling describe-auto-scaling-groups \
         --auto-scaling-group-names "$asg_name" \
-        --region "$region" &>/dev/null; then
+        --region "$region" \
+        --query "AutoScalingGroups[0].AutoScalingGroupName" \
+        --output text 2>/dev/null || echo "")
+
+    if [[ -z "$result" || "$result" == "None" ]]; then
         error "Auto Scaling Group not found: $asg_name in region $region"
     fi
 }
@@ -188,11 +195,12 @@ else
     # Wait for instances to be in service
     if [[ "$CAPACITY" -gt 0 ]]; then
         log "Waiting for instances to be in service..."
-        aws autoscaling wait \
+        # 'group-in-service' is the correct waiter subcommand; it polls until
+        # the group's InService count matches the desired capacity.
+        aws autoscaling wait group-in-service \
             --auto-scaling-group-name "$ASG_NAME" \
-            --desired-capacity "$CAPACITY" \
-            --region "$DR_REGION" || warn "Timeout waiting for instances"
-        
+            --region "$DR_REGION" || warn "Timeout waiting for instances to be in service"
+
         log "ASG scaling completed"
     else
         log "ASG scaled to 0 (instances will terminate)"

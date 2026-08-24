@@ -200,22 +200,28 @@ if [[ "$TEARDOWN" == true ]]; then
         log "[DRY-RUN] Would terminate drill instance: $DRILL_ID"
     else
         # Verify instance has drill tag
-        local instance_tags=$(aws ec2 describe-tags \
+        # Verify instance has drill tag before terminating — safety guardrail
+        INSTANCE_PURPOSE=$(aws ec2 describe-tags \
             --filters "Name=resource-id,Values=$DRILL_ID" "Name=key,Values=Purpose" \
             --region "$DR_REGION" \
             --query "Tags[?Key=='Purpose'].Value" \
             --output text 2>/dev/null || true)
-        
-        if [[ ! "$instance_tags" =~ DR-Drill ]]; then
-            error "Instance does not have Purpose=DR-Drill tag - safety check failed"
+
+        if [[ ! "$INSTANCE_PURPOSE" =~ DR-Drill ]]; then
+            error "Instance $DRILL_ID does not have Purpose=DR-Drill tag — refusing teardown as a safety check"
         fi
-        
-        log "Terminating drill instance..."
+
+        log "Terminating drill instance $DRILL_ID..."
         aws ec2 terminate-instances \
             --instance-ids "$DRILL_ID" \
             --region "$DR_REGION" || error "Failed to terminate instance"
-        
-        log "Drill instance terminated successfully"
+
+        log "Waiting for instance to reach terminated state..."
+        aws ec2 wait instance-terminated \
+            --instance-ids "$DRILL_ID" \
+            --region "$DR_REGION" || warn "Timeout waiting for instance termination"
+
+        log "Drill instance $DRILL_ID terminated successfully"
     fi
     exit 0
 fi

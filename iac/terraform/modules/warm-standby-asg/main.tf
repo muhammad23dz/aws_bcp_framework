@@ -26,15 +26,25 @@ resource "aws_vpc" "dr_warm_standby_vpc" {
 }
 
 # DR Region Subnets for Warm Standby
+# FIX: A DR warm-standby MUST span multiple AZs. If the single AZ goes down
+# (which is often the disaster scenario), the ASG cannot launch anywhere.
+# Using var.dr_subnet_cidrs (a list) to create one subnet per AZ.
 resource "aws_subnet" "dr_warm_standby_subnet" {
-  vpc_id     = aws_vpc.dr_warm_standby_vpc.id
-  cidr_block = var.dr_subnet_cidr
+  count             = length(var.dr_subnet_cidrs)
+  vpc_id            = aws_vpc.dr_warm_standby_vpc.id
+  cidr_block        = var.dr_subnet_cidrs[count.index]
+  availability_zone = data.aws_availability_zones.dr.names[count.index]
 
   tags = {
-    Name        = "DR-WarmStandby-Subnet"
+    Name        = "DR-WarmStandby-Subnet-${count.index + 1}"
     Purpose     = "DR-WarmStandby"
     Environment = var.environment
   }
+}
+
+# Fetch available AZs in the DR region
+data "aws_availability_zones" "dr" {
+  state = "available"
 }
 
 # Launch Template for Warm Standby
@@ -46,7 +56,7 @@ resource "aws_launch_template" "warm_standby" {
 
   network_interfaces {
     associate_public_ip_address = false
-    subnet_id                   = aws_subnet.dr_warm_standby_subnet.id
+    # Subnet is chosen by the ASG at launch time based on vpc_zone_identifier
     security_groups             = [aws_security_group.warm_standby.id]
   }
 
@@ -107,7 +117,7 @@ resource "aws_autoscaling_group" "warm_standby" {
   min_size            = var.min_size
   max_size            = var.max_size
   desired_capacity    = var.desired_capacity
-  vpc_zone_identifier = [aws_subnet.dr_warm_standby_subnet.id]
+  vpc_zone_identifier = aws_subnet.dr_warm_standby_subnet[*].id
 
   launch_template {
     id      = aws_launch_template.warm_standby.id

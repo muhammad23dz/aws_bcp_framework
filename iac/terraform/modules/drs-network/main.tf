@@ -47,8 +47,10 @@ resource "aws_subnet" "dr_staging_subnet" {
 
 # KMS Key for DR Region Encryption
 resource "aws_kms_key" "dr_encryption" {
-  provider = aws.dr
-  description = "KMS key for DR region encryption"
+  provider                = aws.dr
+  description             = "KMS key for DR region encryption"
+  enable_key_rotation     = true   # FIX: rotate annually for security best practice
+  deletion_window_in_days = 14     # FIX: explicit safe deletion window (7-30 days)
 
   tags = {
     Purpose = "DR-Encryption"
@@ -61,44 +63,34 @@ resource "aws_kms_alias" "dr_encryption" {
   target_key_id = aws_kms_key.dr_encryption.id
 }
 
-# DRS Source Server (mock resource - actual DRS requires agent installation)
-# This represents the configuration for DRS source server
-resource "aws_drs_source_server" "primary" {
-  provider = aws.primary
-  
-  # Note: Actual DRS source server requires agent installation on EC2 instance
-  # This is a placeholder for the Terraform resource
-  # In practice, you would use the DRS agent on your EC2 instances
-  
-  tags = {
-    Criticality = var.criticality
-    RTO         = var.rto
-    RPO         = var.rpo
-    DR-Region   = var.dr_region
-    Purpose     = "DR-Source"
-  }
-}
+# DRS Source Server - read via data source
+# NOTE: aws_drs_source_server cannot be *created* by Terraform. DRS source
+# servers are registered automatically when the DRS agent is installed and
+# activated on an EC2 instance. We look it up here so other resources can
+# reference its attributes (e.g. the source server ID).
+# If var.source_server_id is empty (before agent installation), this block
+# is intentionally kept as documentation only and should be uncommented once
+# the agent is installed.
+#
+# data "aws_drs_source_server" "primary" {
+#   provider         = aws.primary
+#   source_server_id = var.source_server_id
+# }
 
 # DRS Replication Configuration Template
-resource "aws_drs_replication_configuration_template" "main" {
-  provider = aws.primary
-  
-  source_server_id = var.source_server_id
-  # Note: This is a simplified representation
-  # Actual DRS replication configuration requires more parameters
-  
-  tags = {
-    Purpose = "DR-Replication"
-  }
-}
+# NOTE: aws_drs_replication_configuration_template requires several mandatory
+# arguments (replication_server_instance_type, staging_area_subnet_id,
+# use_dedicated_replication_server, etc.) that are environment-specific.
+# Configure this resource directly in the environment layer (envs/sandbox)
+# once the DRS staging subnet is known, rather than in this shared module.
 
 # DRS Launch Configuration Template
 resource "aws_drs_launch_configuration_template" "main" {
   provider = aws.dr
-  
+
   # Launch configuration for recovery instances
-  # This configures how instances are launched during failover
-  
+  # Configures how instances are launched during failover
+
   tags = {
     Purpose = "DR-Recovery"
   }

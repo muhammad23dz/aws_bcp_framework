@@ -8,12 +8,19 @@ terraform {
     }
   }
 
+  # IMPORTANT: Terraform does NOT allow variable references inside backend
+  # blocks. Supply these values via -backend-config flags at init time:
+  #
+  #   terraform init \
+  #     -backend-config="bucket=<YOUR_STATE_BUCKET>" \
+  #     -backend-config="region=<YOUR_PRIMARY_REGION>" \
+  #     -backend-config="dynamodb_table=<YOUR_LOCK_TABLE>"
+  #
+  # Or create a backend.hcl file and pass it with -backend-config=backend.hcl
   backend "s3" {
-    bucket         = var.terraform_state_bucket
-    key            = "aws-bcp-framework/sandbox/terraform.tfstate"
-    region         = var.primary_region
-    encrypt        = true
-    dynamodb_table = var.terraform_lock_table
+    key     = "aws-bcp-framework/sandbox/terraform.tfstate"
+    encrypt = true
+    # bucket, region, and dynamodb_table must be set via -backend-config flags
   }
 }
 
@@ -72,9 +79,10 @@ module "warm_standby" {
   source = "../../../modules/warm-standby-asg"
 
   dr_region                 = var.dr_region
-  dr_vpc_cidr              = var.warm_standby_vpc_cidr
-  dr_subnet_cidr           = var.warm_standby_subnet_cidr
-  ami_id                   = var.ami_id
+  dr_vpc_cidr               = var.warm_standby_vpc_cidr
+  # Multi-AZ: pass two subnet CIDRs so instances can spread across AZs
+  dr_subnet_cidrs           = var.warm_standby_subnet_cidrs
+  ami_id                    = var.ami_id
   instance_type            = var.instance_type
   min_size                 = 0
   max_size                 = 5

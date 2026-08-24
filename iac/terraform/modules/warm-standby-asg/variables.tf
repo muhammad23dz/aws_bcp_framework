@@ -10,16 +10,27 @@ variable "dr_vpc_cidr" {
   default     = "10.2.0.0/16"
 }
 
-variable "dr_subnet_cidr" {
-  description = "CIDR block for DR subnet"
-  type        = string
-  default     = "10.2.1.0/24"
+# dr_subnet_cidrs replaces the old dr_subnet_cidr (single value). Providing
+# at least 2 CIDRs is strongly recommended to span multiple AZs.
+variable "dr_subnet_cidrs" {
+  description = "List of CIDR blocks for DR subnets (one per AZ). Provide at least 2 for multi-AZ resiliency."
+  type        = list(string)
+  default     = ["10.2.1.0/24", "10.2.2.0/24"]
+
+  validation {
+    condition     = length(var.dr_subnet_cidrs) >= 1
+    error_message = "At least one subnet CIDR must be provided. Two or more are recommended for multi-AZ DR."
+  }
 }
 
 variable "ami_id" {
-  description = "AMI ID for warm standby instances"
+  description = "AMI ID for warm standby instances. Must be a valid AMI in the DR region. No default is provided — this must be explicitly set by the caller."
   type        = string
-  default     = ""
+
+  validation {
+    condition     = length(var.ami_id) > 4 && substr(var.ami_id, 0, 4) == "ami-"
+    error_message = "ami_id must be a valid AMI ID starting with 'ami-' (e.g. ami-0abcdef1234567890)."
+  }
 }
 
 variable "instance_type" {
