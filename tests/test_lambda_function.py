@@ -27,7 +27,7 @@ SAMPLE_FINDINGS = [
         "Resources": [{"Type": "AWS::S3::Bucket", "Id": "arn:aws:s3:::my-bucket"}],
         "CreatedAt": "2026-08-01T10:00:00Z",
         "UpdatedAt": "2026-08-01T10:00:00Z",
-        "AwsAccountId": "417441750480",
+        "AwsAccountId": "123456789012",
         "Region": "us-east-1",
         "GeneratorId": "aws-foundational-security-best-practices/v/1.0.0/S3.2",
     },
@@ -39,10 +39,10 @@ SAMPLE_FINDINGS = [
         "Compliance": {"Status": "FAILED"},
         "WorkflowState": "NEW",
         "RecordState": "ACTIVE",
-        "Resources": [{"Type": "AWS::IAM::Account", "Id": "arn:aws:iam::417441750480:root"}],
+        "Resources": [{"Type": "AWS::IAM::Account", "Id": "arn:aws:iam::123456789012:root"}],
         "CreatedAt": "2026-08-01T11:00:00Z",
         "UpdatedAt": "2026-08-01T11:00:00Z",
-        "AwsAccountId": "417441750480",
+        "AwsAccountId": "123456789012",
         "Region": "us-east-1",
         "GeneratorId": "aws-foundational-security-best-practices/v/1.0.0/IAM.9",
     },
@@ -57,7 +57,7 @@ SAMPLE_FINDINGS = [
         "Resources": [{"Type": "AWS::CloudTrail::Trail", "Id": "arn:aws:cloudtrail:::trail/test"}],
         "CreatedAt": "2026-08-01T12:00:00Z",
         "UpdatedAt": "2026-08-01T12:00:00Z",
-        "AwsAccountId": "417441750480",
+        "AwsAccountId": "123456789012",
         "Region": "us-east-1",
         "GeneratorId": "aws-foundational-security-best-practices/v/1.0.0/CT.1",
     },
@@ -71,7 +71,7 @@ def build_mock_session():
 
     # Mock describe_hub (non-fatal check)
     mock_securityhub.describe_hub.return_value = {
-        "HubArn": "arn:aws:securityhub:us-east-1:417441750480:hub/default"
+        "HubArn": "arn:aws:securityhub:us-east-1:123456789012:hub/default"
     }
 
     # Mock paginator to return sample findings
