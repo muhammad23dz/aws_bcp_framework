@@ -61,20 +61,15 @@ def lambda_handler(event, context):
         print("Initializing Security Hub client")
         securityhub = session.client("securityhub")
         
-        # Check if Security Hub is enabled
+        # Check if Security Hub is enabled (non-fatal)
         try:
             print("Checking Security Hub status")
             hub_status = securityhub.describe_hub()
             print(f"Security Hub ARN: {hub_status.get('HubArn', 'Unknown')}")
         except Exception as e:
-            print(f"Error checking Security Hub status: {str(e)}")
-            return {
-                'statusCode': 400,
-                'body': json.dumps({
-                    'message': 'Security Hub is not enabled or accessible',
-                    'error': str(e)
-                })
-            }
+            # Not fatal — the user may lack securityhub:DescribeHub but still have
+            # securityhub:GetFindings. Continue and let GetFindings fail if needed.
+            print(f"Warning: Could not check Security Hub status (continuing anyway): {str(e)}")
         
         # Get Security Hub findings
         print("Retrieving Security Hub findings...")
