@@ -23,11 +23,11 @@ resource "aws_resourcegroups_group" "high_criticality_production" {
       ResourceTypeFilters = var.resource_type_filters
       TagFilters = [
         {
-          Key = "Criticality"
+          Key    = "Criticality"
           Values = ["High"]
         },
         {
-          Key = "Environment"
+          Key    = "Environment"
           Values = ["Production"]
         }
       ]
@@ -35,7 +35,7 @@ resource "aws_resourcegroups_group" "high_criticality_production" {
   }
 
   tags = {
-    Purpose = "DR-ResourceGroup"
+    Purpose     = "DR-ResourceGroup"
     Criticality = "High"
   }
 }
@@ -56,7 +56,7 @@ resource "aws_resourcegroups_group" "warm_standby_infrastructure" {
       ]
       TagFilters = [
         {
-          Key = "Purpose"
+          Key    = "Purpose"
           Values = ["DR-WarmStandby"]
         }
       ]
@@ -68,12 +68,14 @@ resource "aws_resourcegroups_group" "warm_standby_infrastructure" {
   }
 }
 
-# Tagging Policy for DR Resources
-resource "aws_resourcegroups_tagging_resource" "example" {
-  for_each = var.default_tags
-
-  resource_arn = each.value.resource_arn
-  tags = {
-    (each.key) = each.value.value
-  }
-}
+# NOTE: There is no native "aws_resourcegroups_tagging_resource" in the AWS provider.
+# Apply tags directly to individual resources or use provider-level default_tags instead.
+#
+# resource "aws_resourcegroups_tagging_resource" "example" {
+#   for_each = var.default_tags
+#
+#   resource_arn = each.value.resource_arn
+#   tags = {
+#     (each.key) = each.value.value
+#   }
+# }

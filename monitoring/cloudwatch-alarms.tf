@@ -30,7 +30,7 @@ resource "aws_sns_topic_subscription" "email_alert" {
 
 # SNS Topic Subscription for Slack (optional)
 resource "aws_sns_topic_subscription" "slack_alert" {
-  count      = var.slack_webhook_url != "" ? 1 : 0
+  count     = var.slack_webhook_url != "" ? 1 : 0
   topic_arn = aws_sns_topic.dr_alerts.arn
   protocol  = "https"
   endpoint  = var.slack_webhook_url
@@ -45,7 +45,7 @@ resource "aws_cloudwatch_metric_alarm" "primary_region_health_mtd_high" {
   namespace           = "DR"
   period              = 60
   statistic           = "Maximum"
-  threshold           = 3600  # MTD - RTO = 7200 - 3600
+  threshold           = 3600 # MTD - RTO = 7200 - 3600
   alarm_description   = "Alert when primary region health failure duration exceeds MTD-RTO buffer for high-criticality resources"
   alarm_actions       = [aws_sns_topic.dr_alerts.arn]
   ok_actions          = [aws_sns_topic.dr_alerts.arn]
@@ -65,7 +65,7 @@ resource "aws_cloudwatch_metric_alarm" "primary_region_health_mtd_medium" {
   namespace           = "DR"
   period              = 60
   statistic           = "Maximum"
-  threshold           = 14400  # MTD - RTO = 28800 - 14400
+  threshold           = 14400 # MTD - RTO = 28800 - 14400
   alarm_description   = "Alert when primary region health failure duration exceeds MTD-RTO buffer for medium-criticality resources"
   alarm_actions       = [aws_sns_topic.dr_alerts.arn]
   ok_actions          = [aws_sns_topic.dr_alerts.arn]
@@ -85,7 +85,7 @@ resource "aws_cloudwatch_metric_alarm" "drs_replication_lag_high" {
   namespace           = "AWS/DRS"
   period              = 300
   statistic           = "Maximum"
-  threshold           = 300  # RPO target
+  threshold           = 300 # RPO target
   alarm_description   = "Alert when DRS replication lag exceeds RPO target for high-criticality resources"
   alarm_actions       = [aws_sns_topic.dr_alerts.arn]
   ok_actions          = [aws_sns_topic.dr_alerts.arn]
@@ -109,7 +109,7 @@ resource "aws_cloudwatch_metric_alarm" "s3_replication_latency" {
   namespace           = "AWS/S3"
   period              = 300
   statistic           = "Maximum"
-  threshold           = 900  # RPO target
+  threshold           = 900 # RPO target
   alarm_description   = "Alert when S3 cross-region replication latency exceeds RPO target"
   alarm_actions       = [aws_sns_topic.dr_alerts.arn]
   ok_actions          = [aws_sns_topic.dr_alerts.arn]
@@ -132,7 +132,7 @@ resource "aws_cloudwatch_metric_alarm" "rds_snapshot_age" {
   namespace           = "DR"
   period              = 300
   statistic           = "Maximum"
-  threshold           = 300  # RPO target
+  threshold           = 300 # RPO target
   alarm_description   = "Alert when RDS snapshot age exceeds RPO target"
   alarm_actions       = [aws_sns_topic.dr_alerts.arn]
   ok_actions          = [aws_sns_topic.dr_alerts.arn]
@@ -176,61 +176,61 @@ resource "aws_cloudwatch_dashboard" "dr_monitoring" {
   dashboard_body = jsonencode({
     widgets = [
       {
-        type  = "metric"
-        x     = 0
-        y     = 0
-        width = 12
+        type   = "metric"
+        x      = 0
+        y      = 0
+        width  = 12
         height = 6
         properties = {
           metrics = [
-            ["DR", "PrimaryRegionHealthCheckFailureDuration", {"region": var.aws_region}]
+            ["DR", "PrimaryRegionHealthCheckFailureDuration", { "region" : var.aws_region }]
           ]
-          period   = 60
-          stat     = "Maximum"
-          region   = var.aws_region
-          title    = "Primary Region Health Failure Duration"
+          period = 60
+          stat   = "Maximum"
+          region = var.aws_region
+          title  = "Primary Region Health Failure Duration"
         }
       },
       {
-        type  = "metric"
-        x     = 0
-        y     = 6
-        width = 12
+        type   = "metric"
+        x      = 0
+        y      = 6
+        width  = 12
         height = 6
         properties = {
           metrics = [
-            ["AWS/DRS", "TimeSinceLastSuccessfulReplication", {"region": var.dr_region}]
+            ["AWS/DRS", "TimeSinceLastSuccessfulReplication", { "region" : var.dr_region }]
           ]
-          period   = 300
-          stat     = "Maximum"
-          region   = var.dr_region
-          title    = "DRS Replication Lag"
+          period = 300
+          stat   = "Maximum"
+          region = var.dr_region
+          title  = "DRS Replication Lag"
         }
       },
       {
-        type  = "metric"
-        x     = 0
-        y     = 12
-        width = 12
+        type   = "metric"
+        x      = 0
+        y      = 12
+        width  = 12
         height = 6
         properties = {
           metrics = [
-            ["AWS/S3", "ReplicationLatency", {"region": var.dr_region}]
+            ["AWS/S3", "ReplicationLatency", { "region" : var.dr_region }]
           ]
-          period   = 300
-          stat     = "Maximum"
-          region   = var.dr_region
-          title    = "S3 Replication Latency"
+          period = 300
+          stat   = "Maximum"
+          region = var.dr_region
+          title  = "S3 Replication Latency"
         }
       },
       {
-        type  = "alarm"
-        x     = 0
-        y     = 18
-        width = 24
+        type   = "alarm"
+        x      = 0
+        y      = 18
+        width  = 24
         height = 3
         properties = {
-          title  = "DR Alarms"
+          title = "DR Alarms"
           alarms = [
             aws_cloudwatch_metric_alarm.primary_region_health_mtd_high.alarm_name,
             aws_cloudwatch_metric_alarm.drs_replication_lag_high.alarm_name,

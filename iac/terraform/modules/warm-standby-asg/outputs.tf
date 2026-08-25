@@ -3,9 +3,9 @@ output "dr_vpc_id" {
   value       = aws_vpc.dr_warm_standby_vpc.id
 }
 
-output "dr_subnet_id" {
-  description = "ID of the DR warm standby subnet"
-  value       = aws_subnet.dr_warm_standby_subnet.id
+output "dr_subnet_ids" {
+  description = "IDs of the DR warm standby subnets"
+  value       = aws_subnet.dr_warm_standby_subnet[*].id
 }
 
 output "asg_name" {

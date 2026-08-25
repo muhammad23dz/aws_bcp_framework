@@ -20,7 +20,7 @@ provider "aws" {
 
 # DR Region VPC for Staging Area
 resource "aws_vpc" "dr_vpc" {
-  provider = aws.dr
+  provider             = aws.dr
   cidr_block           = var.dr_vpc_cidr
   enable_dns_hostnames = true
   enable_dns_support   = true
@@ -34,7 +34,7 @@ resource "aws_vpc" "dr_vpc" {
 
 # DR Region Subnet for Staging Area
 resource "aws_subnet" "dr_staging_subnet" {
-  provider = aws.dr
+  provider   = aws.dr
   vpc_id     = aws_vpc.dr_vpc.id
   cidr_block = var.dr_subnet_cidr
 
@@ -49,8 +49,8 @@ resource "aws_subnet" "dr_staging_subnet" {
 resource "aws_kms_key" "dr_encryption" {
   provider                = aws.dr
   description             = "KMS key for DR region encryption"
-  enable_key_rotation     = true   # FIX: rotate annually for security best practice
-  deletion_window_in_days = 14     # FIX: explicit safe deletion window (7-30 days)
+  enable_key_rotation     = true # FIX: rotate annually for security best practice
+  deletion_window_in_days = 14   # FIX: explicit safe deletion window (7-30 days)
 
   tags = {
     Purpose = "DR-Encryption"
@@ -58,7 +58,7 @@ resource "aws_kms_key" "dr_encryption" {
 }
 
 resource "aws_kms_alias" "dr_encryption" {
-  provider = aws.dr
+  provider      = aws.dr
   name          = "alias/dr-encryption-key"
   target_key_id = aws_kms_key.dr_encryption.id
 }
@@ -85,20 +85,24 @@ resource "aws_kms_alias" "dr_encryption" {
 # once the DRS staging subnet is known, rather than in this shared module.
 
 # DRS Launch Configuration Template
-resource "aws_drs_launch_configuration_template" "main" {
-  provider = aws.dr
-
-  # Launch configuration for recovery instances
-  # Configures how instances are launched during failover
-
-  tags = {
-    Purpose = "DR-Recovery"
-  }
-}
+# NOTE: There is no native "aws_drs_launch_configuration_template" in the official
+# Terraform AWS provider. Manage DRS launch settings via the AWS console, CLI,
+# or custom null_resource script calls.
+#
+# resource "aws_drs_launch_configuration_template" "main" {
+#   provider = aws.dr
+#
+#   # Launch configuration for recovery instances
+#   # Configures how instances are launched during failover
+#
+#   tags = {
+#     Purpose = "DR-Recovery"
+#   }
+# }
 
 # Security Group for DR Staging Area
 resource "aws_security_group" "dr_staging" {
-  provider = aws.dr
+  provider    = aws.dr
   name        = "dr-staging-sg"
   description = "Security group for DR staging area"
   vpc_id      = aws_vpc.dr_vpc.id

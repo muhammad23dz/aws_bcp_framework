@@ -20,5 +20,5 @@ output "dr_kms_key_arn" {
 
 output "drs_source_server_id" {
   description = "ID of the DRS source server"
-  value       = aws_drs_source_server.primary.id
+  value       = var.source_server_id
 }

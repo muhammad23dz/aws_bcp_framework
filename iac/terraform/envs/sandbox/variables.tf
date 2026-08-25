@@ -25,7 +25,7 @@ variable "dr_region" {
 variable "account_id" {
   description = "AWS account ID"
   type        = string
-  default     = ""  # Set via TF_VAR_account_id or terraform.tfvars
+  default     = "" # Set via TF_VAR_account_id or terraform.tfvars
 }
 
 variable "primary_vpc_cidr" {
@@ -67,7 +67,7 @@ variable "source_server_id" {
 variable "ami_id" {
   description = "AMI ID for instances"
   type        = string
-  default     = ""  # Set via TF_VAR_ami_id or terraform.tfvars
+  default     = "" # Set via TF_VAR_ami_id or terraform.tfvars
 }
 
 variable "instance_type" {
@@ -107,11 +107,11 @@ variable "default_tags" {
 variable "terraform_state_bucket" {
   description = "S3 bucket for Terraform state"
   type        = string
-  default     = ""  # Set via TF_VAR_terraform_state_bucket
+  default     = "" # Set via TF_VAR_terraform_state_bucket
 }
 
 variable "terraform_lock_table" {
   description = "DynamoDB table for Terraform state locking"
   type        = string
-  default     = ""  # Set via TF_VAR_terraform_lock_table
+  default     = "" # Set via TF_VAR_terraform_lock_table
 }

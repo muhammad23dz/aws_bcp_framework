@@ -57,7 +57,7 @@ resource "aws_launch_template" "warm_standby" {
   network_interfaces {
     associate_public_ip_address = false
     # Subnet is chosen by the ASG at launch time based on vpc_zone_identifier
-    security_groups             = [aws_security_group.warm_standby.id]
+    security_groups = [aws_security_group.warm_standby.id]
   }
 
   tag_specifications {

@@ -9,11 +9,11 @@ output "tagging_baseline" {
 output "s3_crr" {
   description = "S3 cross-region replication outputs"
   value = {
-    primary_bucket_name    = module.s3_crr.primary_bucket_name
-    primary_bucket_arn     = module.s3_crr.primary_bucket_arn
-    replica_bucket_name    = module.s3_crr.replica_bucket_name
-    replica_bucket_arn     = module.s3_crr.replica_bucket_arn
-    replication_role_arn   = module.s3_crr.replication_role_arn
+    primary_bucket_name  = module.s3_crr.primary_bucket_name
+    primary_bucket_arn   = module.s3_crr.primary_bucket_arn
+    replica_bucket_name  = module.s3_crr.replica_bucket_name
+    replica_bucket_arn   = module.s3_crr.replica_bucket_arn
+    replication_role_arn = module.s3_crr.replication_role_arn
   }
 }
 
@@ -31,11 +31,11 @@ output "drs_network" {
 output "warm_standby" {
   description = "Warm standby ASG outputs"
   value = {
-    dr_vpc_id           = module.warm_standby.dr_vpc_id
-    dr_subnet_id        = module.warm_standby.dr_subnet_id
-    asg_name            = module.warm_standby.asg_name
-    launch_template_id  = module.warm_standby.launch_template_id
-    security_group_id    = module.warm_standby.security_group_id
-    sns_topic_arn       = module.warm_standby.sns_topic_arn
+    dr_vpc_id          = module.warm_standby.dr_vpc_id
+    dr_subnet_ids      = module.warm_standby.dr_subnet_ids
+    asg_name           = module.warm_standby.asg_name
+    launch_template_id = module.warm_standby.launch_template_id
+    security_group_id  = module.warm_standby.security_group_id
+    sns_topic_arn      = module.warm_standby.sns_topic_arn
   }
 }
